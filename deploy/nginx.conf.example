@@ -1,0 +1,39 @@
+server {
+    listen 80;
+    server_name recharge.example.com;
+    return 301 https://recharge.example.com$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    server_name recharge.example.com;
+    ssl_certificate /etc/letsencrypt/live/recharge.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/recharge.example.com/privkey.pem;
+    root /var/www/gpt-redeem/public;
+    client_max_body_size 64k;
+
+    location ~ /\. { deny all; }
+    location = /media/tutorial.mp4 {
+        types { video/mp4 mp4; }
+        try_files $uri =404;
+        add_header X-Content-Type-Options nosniff;
+    }
+    location = /media/tutorial-poster.jpg {
+        types { image/jpeg jpg; }
+        try_files $uri =404;
+    }
+    location ~ ^/assets/[a-z0-9-]+\.(css|js|svg)$ {
+        try_files $uri =404;
+        add_header X-Content-Type-Options nosniff;
+    }
+    # Route every other request through the PHP allowlist in router.php.
+    # Configuration, data, scripts and database/ remain outside public/.
+    location / {
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME /var/www/gpt-redeem/router.php;
+        fastcgi_param DOCUMENT_ROOT /var/www/gpt-redeem/public;
+        fastcgi_param HTTPS on;
+        fastcgi_param HTTP_PROXY "";
+        fastcgi_pass unix:/run/php/php8.5-fpm.sock;
+    }
+}

@@ -1,0 +1,66 @@
+CREATE TABLE IF NOT EXISTS cards (
+ id VARCHAR(32) PRIMARY KEY,
+ code_hash CHAR(64) NOT NULL UNIQUE,
+ prefix VARCHAR(32) NOT NULL,
+ plan VARCHAR(32) NOT NULL,
+ scenario VARCHAR(32) NOT NULL,
+ status VARCHAR(32) NOT NULL DEFAULT 'unused',
+ expires_at BIGINT NOT NULL,
+ created_at BIGINT NOT NULL,
+ order_id VARCHAR(36) NULL,
+ provider VARCHAR(16) NOT NULL DEFAULT 'mock'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+
+CREATE TABLE IF NOT EXISTS orders (
+ id VARCHAR(36) PRIMARY KEY,
+ card_id VARCHAR(32) NOT NULL,
+ email VARCHAR(120) NOT NULL,
+ plan VARCHAR(32) NOT NULL,
+ scenario VARCHAR(32) NOT NULL,
+ idempotency_key VARCHAR(48) NOT NULL UNIQUE,
+ status VARCHAR(32) NOT NULL DEFAULT 'pending',
+ task_id VARCHAR(64) NULL,
+ reason VARCHAR(255) NOT NULL DEFAULT '',
+ charged TINYINT NULL,
+ subscription_succeeded TINYINT NOT NULL DEFAULT 0,
+ created_at BIGINT NOT NULL,
+ updated_at BIGINT NOT NULL,
+ restored_at BIGINT NULL,
+ provider VARCHAR(16) NOT NULL DEFAULT 'mock',
+ request_snapshot TEXT NULL,
+ last_query_at BIGINT NOT NULL DEFAULT 0,
+ retry_after BIGINT NOT NULL DEFAULT 0,
+ subscription_cancelled TINYINT NULL,
+ query_until BIGINT NOT NULL DEFAULT 0,
+ query_token VARCHAR(32) NULL,
+ query_error TINYINT NOT NULL DEFAULT 0,
+ INDEX order_states(status),
+ CONSTRAINT orders_card_fk FOREIGN KEY(card_id) REFERENCES cards(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+
+CREATE TABLE IF NOT EXISTS mock_tasks (
+ id VARCHAR(64) PRIMARY KEY,
+ order_id VARCHAR(36) NOT NULL UNIQUE,
+ idempotency_key VARCHAR(48) NOT NULL UNIQUE,
+ email VARCHAR(120) NOT NULL,
+ plan VARCHAR(32) NOT NULL,
+ scenario VARCHAR(32) NOT NULL,
+ ready_at BIGINT NOT NULL,
+ verified TINYINT NOT NULL DEFAULT 0,
+ resolution VARCHAR(32) NULL,
+ CONSTRAINT mock_order_fk FOREIGN KEY(order_id) REFERENCES orders(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+
+CREATE TABLE IF NOT EXISTS events (
+ id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+ action VARCHAR(64) NOT NULL,
+ object_id VARCHAR(64) NOT NULL,
+ created_at BIGINT NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+
+CREATE TABLE IF NOT EXISTS limits (
+ bucket VARCHAR(160) PRIMARY KEY,
+ count INT NOT NULL,
+ reset_at BIGINT NOT NULL,
+ INDEX limit_expiry(reset_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;

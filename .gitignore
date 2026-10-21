@@ -1,0 +1,11 @@
+.runtime/
+data/
+artifacts/
+config.local.php
+config.*.local.php
+*.log
+.DS_Store
+.env
+.env.*
+!.env.example
+releases/
